@@ -1,0 +1,21 @@
+<library path="src">
+  <class name="My Plugin" type="rqt_robot_ctrl_gui.my_module.MyPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      An example Python GUI plugin to create a great user interface.
+    </description>
+    <qtgui>
+      <!-- optional grouping...
+      <group>
+        <label>Group</label>
+      </group>
+      <group>
+        <label>Subgroup</label>
+      </group>
+      -->
+      <label>My first Python Plugin</label>
+      <!-- https://specifications.freedesktop.org/icon-naming-spec/icon-naming-spec-latest.html#guidelines -->
+      <icon type="theme">computer</icon> 
+      <statustip>Great user interface to provide real value.</statustip>
+    </qtgui>
+  </class>
+</library>
