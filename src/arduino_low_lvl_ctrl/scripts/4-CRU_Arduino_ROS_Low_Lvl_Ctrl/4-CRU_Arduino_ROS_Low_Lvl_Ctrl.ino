@@ -8,7 +8,7 @@ Devices:
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 #include <ros.h> // Always include this header for serial communication with ROS
-#include <ArduinoHardware.h> // Optional for advanced options
+// #include <ArduinoHardware.h> // Optional for advanced options
 #include <PID_v1.h> // https://playground.arduino.cc/Code/PIDLibrary/
 #include <TimedAction.h> // https://playground.arduino.cc/Code/TimedAction/
 #include <ros/time.h> // For generating timestamp that sync Arduino with roscore
@@ -16,7 +16,9 @@ Devices:
 // Built-in ROS Data Type
 #include <std_msgs/Empty.h>
 #include <sensor_msgs/JointState.h>
-#include <geometry_msgs/Twist.h>
+// #include <geometry_msgs/Twist.h>
+#include <control_msgs/JointJog.h>
+#include <std_msgs/Float32.h>
 
 // Set up pins for potentiometer reading
 #define M1_POT A0 // 10-bit (0-1023)
@@ -44,7 +46,7 @@ Devices:
 // Interval time for different tasks in milliseconds 
 // This link demonstrate simple codes for times action tasks similar to the library TimeAction.h 
 // (https://www.norwegiancreations.com/2017/09/arduino-tutorial-using-millis-instead-of-delay/)
-#define INTERVAL_LOW_LVL_CTRL 5 // 200 Hz
+#define INTERVAL_LOW_LVL_CTRL 40 //25 Hz
 
 // Switch between 0 or 1 to debug
 #define DEBUG 0
@@ -67,16 +69,15 @@ float motor_lin_speed[4]; // [mm/s]
 
 // Initialize array of all motor position (http://wiki.ros.org/rosserial/Overview/Messages)
 sensor_msgs::JointState joint_state;
-sensor_msgs::JointState des_joint_state;
+control_msgs::JointJog des_joint_state;
 //creating the arrays for the message
 char *name[] = {"motor_1", "motor_2", "motor_3", "motor_4"};
-char *desname[] = {"motor_1", "motor_2", "motor_3", "motor_4"};
 float vel[4];
 float pos[4];
 float eff[4];
-float despos[4];
-float desvel[4];
-float deseff[4];
+char *des_name[] = {"motor_1", "motor_2", "motor_3", "motor_4"};
+float des_pos[4];
+float des_vel[4];
 
 // initialize PID controller
 double Kp = 10, Ki = 0.1, Kd=0;
@@ -96,17 +97,41 @@ ros::Publisher pubDesJointState("des_joint_state", &des_joint_state);
 
 // Callback Functions
 void messageLEDCb( const std_msgs::Empty& toggle_msg) {
-  digitalWrite(LED_BUILTIN, HIGH - digitalRead(LED_BUILTIN)); // toggle the built-in LED
+	digitalWrite(LED_BUILTIN, HIGH - digitalRead(LED_BUILTIN)); // toggle the built-in LED
 }
 
-void messagePWMCb( const geometry_msgs::Twist& msg) {
-	// For manual motor control testing
-	des_motor_pos[0] = des_motor_pos[0] + msg.linear.z;
+// void messagePosCmdCb( const control_msgs::JointJog& jog_msg) { 
+// 	// See and example in https://alexsleat.co.uk/2011/07/02/ros-publishing-and-subscribing-to-arrays/
+// 	for (int i = 0; i < 4; i++) {
+// 		des_joint_state.displacements[i] = jog_msg.displacements[i];
+// 	}
+// 	des_joint_state.displacements = jog_msg.displacements;
+// 	pubDesJointState.publish( &des_joint_state );
+// }
+
+void messagePosCmdMotor1( const std_msgs::Float32& msg) {
+	des_motor_pos[0] = msg.data;
+}
+
+void messagePosCmdMotor2( const std_msgs::Float32& msg) {
+	des_motor_pos[1] = msg.data;
+}
+
+void messagePosCmdMotor3( const std_msgs::Float32& msg) {
+	des_motor_pos[2] = msg.data;
+}
+
+void messagePosCmdMotor4( const std_msgs::Float32& msg) {
+	des_motor_pos[3] = msg.data;
 }
 
 // Setup Subscribers
 ros::Subscriber<std_msgs::Empty> subLED("toggle_led", &messageLEDCb);
-ros::Subscriber<geometry_msgs::Twist> subPWM1("cmd_vel", &messagePWMCb );
+// ros::Subscriber<control_msgs::JointJog> subPosCmd("joint_pos_cmd", &messagePosCmdCb );
+ros::Subscriber<std_msgs::Float32> subPosCmdMotor1("joint_pos_cmd_motor_1", &messagePosCmdMotor1 );
+ros::Subscriber<std_msgs::Float32> subPosCmdMotor2("joint_pos_cmd_motor_2", &messagePosCmdMotor2 );
+ros::Subscriber<std_msgs::Float32> subPosCmdMotor3("joint_pos_cmd_motor_3", &messagePosCmdMotor3 );
+ros::Subscriber<std_msgs::Float32> subPosCmdMotor4("joint_pos_cmd_motor_4", &messagePosCmdMotor4 );
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -189,18 +214,17 @@ void getJointFeedbacks(){
 	for (int i = 0; i < 4; i++) {
     	motor_pos[i] = motor_pos[i]*motor_stroke_length/1024.0; // [mm]
     	joint_state.position[i] = (float) motor_pos[i];
-    	// des_joint_state.position[i] = (float) des_motor_pos[i];
-    	// Show velocity as the pwm output for the time being
-    	joint_state.velocity[i] = (float) des_motor_pos[i]; 
-    	// joint_state.effort[i] = (float) motor_pwm[i];
+    	// Show velocity as the des_joint_pos
+    	des_joint_state.displacements[i] = (float) des_motor_pos[i]; 
+    	joint_state.effort[i] = (float) motor_pwm[i];
     }
     // get the roscore timestamp
     joint_state.header.stamp = nh.now(); 
-    // des_joint_state.header.stamp = nh.now(); 
+    des_joint_state.header.stamp = nh.now(); 
 
     // publish the joint states
     pubJointState.publish( &joint_state );
-    // pubDesJointState.publish( &des_joint_state ); // somehow having trouble with publishin this one
+    pubDesJointState.publish( &des_joint_state );
 }
 
 void computePIDs(){
@@ -229,33 +253,38 @@ void setup() {
 
 	nh.initNode();
 	nh.subscribe(subLED);
-	nh.subscribe(subPWM1);
-	nh.advertise(pubJointState);
+	nh.subscribe(subPosCmdMotor1);
+	nh.subscribe(subPosCmdMotor2);
+	nh.subscribe(subPosCmdMotor3);
+	nh.subscribe(subPosCmdMotor4);
 
-	//Assign the initialized arrays to the message 
+	nh.advertise(pubJointState);
+	nh.advertise(pubDesJointState);
+
+	//Assign the initialized arrays to the message (http://wiki.ros.org/rosserial/Overview/Messages)
 	joint_state.header.frame_id = "/joint_state";
 	joint_state.name=name;
 	joint_state.position=pos;
 	joint_state.velocity=vel;
 	joint_state.effort=eff;
-
-	des_joint_state.header.frame_id = "/des_joint_state";
-	des_joint_state.name=desname;
-	des_joint_state.position=despos;
-	des_joint_state.velocity=desvel;
-	des_joint_state.effort=deseff;
-
   	/*Set the length To determine the end of the array each one has an auto-generated 
   	integer companion with the same name and the suffix_length*/
 	joint_state.name_length=4;
 	joint_state.position_length=4;
 	joint_state.velocity_length=4;
-	joint_state.position_length=4;
+	joint_state.effort_length=4;
 
-	des_joint_state.name_length=4;
-	des_joint_state.position_length=4;
-	des_joint_state.velocity_length=4;
-	des_joint_state.position_length=4;
+	//Assign the initialized arrays to the message 
+	des_joint_state.header.frame_id = "/des_joint_state";
+	des_joint_state.joint_names=des_name;
+	des_joint_state.displacements=des_pos;
+	des_joint_state.velocities=des_vel;
+	des_joint_state.duration=0;
+  	// Set the length To determine the end of the array each one has an auto-generated 
+  	// integer companion with the same name and the suffix_length
+	des_joint_state.joint_names_length=4;
+	des_joint_state.displacements_length=4;
+	des_joint_state.velocities_length=4;
 
 	// run all tasks in the loop first time once
 	des_motor_pos[0] = 100;

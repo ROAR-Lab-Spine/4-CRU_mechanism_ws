@@ -41,7 +41,7 @@
    <widget class="QWidget" name="layoutWidget">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QSlider" name="verticalSlider">
+      <widget class="QSlider" name="verticalSlider_1">
        <property name="maximum">
         <number>200</number>
        </property>
@@ -139,7 +139,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QRadioButton" name="radioButton_2">
+  <widget class="QRadioButton" name="radioButton_1">
    <property name="geometry">
     <rect>
      <x>270</x>
@@ -155,7 +155,7 @@
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QRadioButton" name="radioButton">
+  <widget class="QRadioButton" name="radioButton_2">
    <property name="geometry">
     <rect>
      <x>270</x>

@@ -1,6 +1,6 @@
 <launch> 
 
-	<node name="serial_node" pkg="rosserial_arduino" type="serial_node.py">
+	<node name="serial_node" pkg="rosserial_python" type="serial_node.py">
 		<!-- Change the port name for Arduino Mega 2560 -->
 		<param name="port" value="/dev/ttyACM0"/> 
 	</node>

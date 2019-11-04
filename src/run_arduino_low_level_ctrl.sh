@@ -8,11 +8,10 @@ sudo chmod a+rw /dev/ttyACM0
 
 roslaunch arduino_low_lvl_ctrl arduino_low_lvl_ctrl.launch &
 
-rqt
+rqt 
 
 # rqt --standalone rqt_robot_ctrl_gui
 
-# rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 
 # Show the velocity commands in xterm 
 # xterm -hold -e  "rostopic echo /cmd_vel"
