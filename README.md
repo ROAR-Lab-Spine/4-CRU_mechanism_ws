@@ -1,6 +1,6 @@
 # 4-CRU Mechanism Control
 
-## Arduino Library
+## Arduino Libraries
 - [PID](https://playground.arduino.cc/Code/PIDLibrary/)
 - [Timeaction](https://playground.arduino.cc/Code/TimedAction/)
 
