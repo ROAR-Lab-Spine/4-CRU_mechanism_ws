@@ -1,4 +1,4 @@
-# 4-CRU_mechanism_ws
+# 4-CRU Mechanism Control
 
 ## Arduino Library
 - [PID](https://playground.arduino.cc/Code/PIDLibrary/)
