@@ -14,6 +14,7 @@ import time
 
 import numpy as np
 import math
+from sympy import * # symbolic calculation for IK
 
 # tips: We can use ipython to test things around! (remeber to >> from tf import transformations)
 
@@ -22,52 +23,53 @@ class Robot_4CRU(object):
 	def __init__(self):
 		super(Robot_4CRU, self).__init__()
 
-		self.init_pose = tfs.identity_matrix()
+		init_pose = tfs.identity_matrix()
+		self.robot_pose = init_pose
+		self.operation_mode = "H1"
 		
-		# End-effector joint axis distribution angles
+		# End-effector joint axis distribution angles (5 cases)
 		self.alphas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0, np.pi/2.0, np.pi/2.0 + np.pi/8.0, np.pi/2.0 + np.pi/4.0])/2.0)
-		# Base joint axis distribution angles
+		# Base joint axis distribution angles (2 cases)
 		self.betas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0]))
+		# end effector diagonal lengths (2 cases)
 		self.eeff_diag_lengths = np.sort(np.array([6.25/np.cos(np.pi/8)-2.0, 6.25/np.cos(np.pi/8)]))
+		# base diagonal length (5 cases)
 		self.base_diag_lengths = np.sort(np.array([	self.eeff_diag_lengths[0],
 			self.eeff_diag_lengths[1],
 			self.eeff_diag_lengths[0]*np.cos(self.alphas[1])/np.cos(self.betas[0]), 
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[0])/np.cos(self.betas[0]),
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[1])/np.cos(self.betas[0])	]))
 
-		self.geometric_indcs = [2, 0, 1, 3]; # selected alpha, beta, eeff_diag_length, base_diag_length
-		a = self.base_diag_lengths[self.geometric_indcs[3]]/(2.0*np.cos(self.betas[self.geometric_indcs[1]]))
-		b = self.base_diag_lengths[self.geometric_indcs[3]]/(2.0*np.sin(self.betas[self.geometric_indcs[1]]))
-		c = self.base_diag_lengths[self.geometric_indcs[2]]/(2.0*np.cos(self.alphas[self.geometric_indcs[0]]))
-		d = self.base_diag_lengths[self.geometric_indcs[2]]/(2.0*np.sin(self.alphas[self.geometric_indcs[0]]))
-		self.geometric_params = np.array([a, b, c, d])
-		print self.geometric_params
-		self.test_current_geometric_cond()
+		self.set_geometric_params([2, 0, 1, 3])
 
-		self.inverse_kinematics()
+	def set_geometric_params(self, new_geometric_indcs):
+		self.geometric_indcs = new_geometric_indcs
+		self.a = self.base_diag_lengths[self.geometric_indcs[3]]/(2.0*np.cos(self.betas[self.geometric_indcs[1]]))
+		self.b = self.base_diag_lengths[self.geometric_indcs[3]]/(2.0*np.sin(self.betas[self.geometric_indcs[1]]))
+		self.c = self.base_diag_lengths[self.geometric_indcs[2]]/(2.0*np.cos(self.alphas[self.geometric_indcs[0]]))
+		self.d = self.base_diag_lengths[self.geometric_indcs[2]]/(2.0*np.sin(self.alphas[self.geometric_indcs[0]]))
+		self.update_geometric_cond()
 
-	def test_current_geometric_cond(self):
-		condition_names = ["Generic", "A", "B", "C"]
-		curr_a = self.geometric_params[0]
-		curr_b = self.geometric_params[1]
-		curr_c = self.geometric_params[2]
-		curr_d = self.geometric_params[3]
+	def update_geometric_cond(self):
+		curr_a = self.a
+		curr_b = self.b
+		curr_c = self.c
+		curr_d = self.d
 		if (curr_a < curr_c and curr_b > curr_d) or (curr_a > curr_c and curr_b < curr_d):
-			print condition_names[0]
+			self.geometric_cond = "Generic"
 		elif curr_a == curr_c and curr_b != curr_d:
-			print condition_names[1]
+			self.geometric_cond = "A"
 		elif curr_a != curr_c and curr_b == curr_d:
-			print condition_names[2]
+			self.geometric_cond = "B"
 		elif curr_a == curr_c and curr_b == curr_d:
-			print condition_names[3]
+			self.geometric_cond = "C"
 		else:
+			self.geometric_cond = "Arbitrary"
 			print "Additional Mode is not achievable"
 
-	def update_geometric_cond(self, new_geometric_indcs):
-		self.geometric_indcs = new_geometric_indcs
-
-	def inverse_kinematics(self):
+	def inverse_kinematics(self, pose, operation_mode):
 		print "Hello World!, this is 4-CRU mechanism"
+
 
 def main():
 	rospy.init_node('robot_4cru', anonymous=True)
