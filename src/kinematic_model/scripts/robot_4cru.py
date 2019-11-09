@@ -13,6 +13,7 @@ import time
 # from robot_sim.msg import RobotState
 
 import numpy as np
+import numpy.linalg as la
 import math
 from sympy import * # symbolic calculation for IK
 
@@ -36,9 +37,10 @@ class Robot_4CRU(object):
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[0])/np.cos(self.betas[0]),
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[1])/np.cos(self.betas[0])	]))
 		# length of the UU couple (from CAD) unit in mm
-		self.r = (1.75*2 + 2.54)*10
-		self.joint_pos_range = np.array([0, 200])
-		self.h_offset = 
+		self.r = (1.75*2 + 2.54)*10.0
+		self.joint_pos_range = np.array([0, 200.00])
+		self.joint_pos = np.full(4, self.joint_pos_range[1]/2.0) # home position
+		self.h_offset = 3.0*25.4 # (approx.) TODO: update from real CAD
 
 		# Calculate geometric parameters
 		# self.set_geometric_params([2, 1, 1, 3])
@@ -46,7 +48,7 @@ class Robot_4CRU(object):
 
 		# Initialize pose in Schoenflies mode
 		self.operation_mode = "H1"
-		self.robot_pose_4dof = np.array([0, 0, 150, 0.2])
+		self.robot_pose_4dof = np.array([20, 10, 150.0, np.pi/12])
 
 		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(self.robot_pose_4dof)
 		self.robot_pose = pose_base_to_eeff
@@ -82,19 +84,56 @@ class Robot_4CRU(object):
 
 	def inverse_kinematics(self, pose_4dof):
 		reals, discriminants, has_solution = self.check_ik_feasible(pose_4dof)
-		joint_pos_sol = np.full((4), self.joint_pos_range[1]/2)
-		print joint_pos
-		print reals
-		print discriminants
-		print has_solution
+		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(pose_4dof)
+		all_joint_pos_sol = np.full((4, 2), self.joint_pos_range[1]/2.0) # home position as default value
+		all_swivel_angles = np.zeros((4,2,2)) # indices [joint_no, +/-discriminant, U1/U2]
 
-		# choose closest h from the two +/- cases
-
-		# check joint range from vertical offsets 
+		if has_solution:
+			for i in range(4):
+				for j in range(2):
+					if j == 0:
+						all_joint_pos_sol[i,j] = reals[i] - np.sqrt(discriminants[i]) - self.h_offset
+						swivel_angle_U1, swivel_angle_U2 = self.calc_swivel_angle(pose_base_to_eeff, all_joint_pos_sol[i,j], i)
+						all_swivel_angles[i,j,0] = swivel_angle_U1
+						all_swivel_angles[i,j,1] = swivel_angle_U2
+					elif j == 1:
+						all_joint_pos_sol[i,j] = reals[i] + np.sqrt(discriminants[i]) - self.h_offset
+						swivel_angle_U1, swivel_angle_U2 = self.calc_swivel_angle(pose_base_to_eeff, all_joint_pos_sol[i,j], i)
+						all_swivel_angles[i,j,0] = swivel_angle_U1
+						all_swivel_angles[i,j,1] = swivel_angle_U2
+		else:
+			print "No IK Solution: at least one discriminant is negative: ", discriminants
 
 		# check the swivel angle limit on both ends of the U-U couplings
+		print all_swivel_angles
+		print all_joint_pos_sol
+		return selected_joint_pos_sol
 
-		return joint_pos_sol
+	def calc_swivel_angle(self, pose_base_to_eeff, joint_pos, joint_index):
+		X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_mat_to_7var(pose_base_to_eeff)
+		
+		# convert signs based on joint indices
+		if joint_index == 0:
+			a = self.a; b = -self.b; c = self.c; d = -self.d
+		elif joint_index == 1:
+			a = self.a; b = self.b; c = self.c; d = self.d
+		elif joint_index == 2:
+			a = -self.a; b = self.b; c = -self.c; d = self.d
+		elif joint_index == 3:
+			a = -self.a; b = -self.b; c = -self.c; d = -self.d
+
+		u0_B_to_C = np.array([X - a + c*(x_0**2 + x_1**2 - x_2**2 - x_3**2) + d*(-2.0*x_0*x_3 + 2.0*x_1*x_2),
+			Y - b + c*(2.0*x_0*x_3 + 2.0*x_1*x_2) + d*(x_0**2 - x_1**2 + x_2**2 - x_3**2),
+			Z + c*(-2.0*x_0*x_2 + 2.0*x_1*x_3) + d*(2.0*x_0*x_1 + 2.0*x_2*x_3) - joint_pos - self.h_offset])
+		v0_C_to_ee = -np.array([c*(x_0**2 + x_1**2 - x_2**2 - x_3**2) + d*(-2.0*x_0*x_3 + 2.0*x_1*x_2),
+			c*(2.0*x_0*x_3 + 2.0*x_1*x_2) + d*(x_0**2 - x_1**2 + x_2**2 - x_3**2),
+			c*(-2.0*x_0*x_2 + 2.0*x_1*x_3) + d*(2.0*x_0*x_1 + 2.0*x_2*x_3)])
+		v0_B_to_base = -np.array([a, b, 0])
+
+		swivel_angle_U1 = py_ang(u0_B_to_C, v0_B_to_base)
+		swivel_angle_U2 = py_ang(v0_C_to_ee, u0_B_to_C)
+
+		return swivel_angle_U1, swivel_angle_U2
 
 	def check_ik_feasible(self, pose_4dof):
 		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(pose_4dof)
@@ -146,6 +185,9 @@ class Robot_4CRU(object):
 			t_mat = tfs.translation_matrix((pose_4dof[0], pose_4dof[1], pose_4dof[2]))
 			r_mat = tfs.rotation_matrix(pose_4dof[3], (0, 0, 1))
 			pose_base_to_eeff = tfs.concatenate_matrices(t_mat, r_mat)
+		if self.operation_mode == "H3":
+			# break down to geometric cases
+
 		else:
 			pass
 
@@ -159,6 +201,12 @@ class Robot_4CRU(object):
 		X = xyz[0]; Y = xyz[1]; Z = xyz[2] 
 		x_0 = quat[3]; x_1 = quat[0]; x_2 = quat[1]; x_3 = quat[2]
 		return X, Y, Z, x_0, x_1, x_2, x_3
+
+def py_ang(v1, v2):
+		""" Returns the angle in radians between vectors 'v1' and 'v2'    """
+		cosang = np.dot(v1, v2)
+		sinang = la.norm(np.cross(v1, v2))
+		return np.arctan2(sinang, cosang)
 
 def main():
 	rospy.init_node('robot_4cru', anonymous=True)
