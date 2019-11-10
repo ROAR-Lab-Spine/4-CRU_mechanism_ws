@@ -122,7 +122,8 @@ class Robot4CRU(object):
 		else:
 			print "No IK Solution: at least one discriminant is negative: ", discriminants
 
-		# check the swivel angle limit on both ends of the U-U couplings
+		# check the swivel angle limit on both ends of the U-U couplings: provide warning on the screen if the joint are out of ranges
+
 		print all_swivel_angles
 		print all_joint_pos_sol
 		return selected_joint_pos_sol
