@@ -22,29 +22,10 @@ class Robot4CRU(object):
 	def __init__(self):
 		super(Robot4CRU, self).__init__()
 
-		# create service for inverse kinematics
+		# Create service for inverse kinematics
 		self.robot_4cru_service = rospy.Service('fake_robot', RobotIK, self.robot_4cru_ik)
 
-		# End-effector joint axis distribution angles (5 cases)
-		self.alphas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0, np.pi/2.0, np.pi/2.0 + np.pi/8.0, np.pi/2.0 + np.pi/4.0])/2.0)
-		# Base joint axis distribution angles (2 cases)
-		self.betas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0]))
-		# end effector diagonal lengths (2 cases) unit in mm
-		self.eeff_diag_lengths = np.sort(np.array([6.25/np.cos(np.pi/8)-2.0, 6.25/np.cos(np.pi/8)]))*25.4
-		# base diagonal length (5 cases) unit in mm
-		self.base_diag_lengths = np.sort(np.array([	self.eeff_diag_lengths[0],
-			self.eeff_diag_lengths[1],
-			self.eeff_diag_lengths[0]*np.cos(self.alphas[1])/np.cos(self.betas[0]), 
-			self.eeff_diag_lengths[1]*np.cos(self.alphas[0])/np.cos(self.betas[0]),
-			self.eeff_diag_lengths[1]*np.cos(self.alphas[1])/np.cos(self.betas[0])	]))
-		# length of the UU couple (from CAD) unit in mm
-		self.r = (1.75*2 + 2.54)*10.0
-		self.joint_pos_range = np.array([0, 200.00])
-		self.joint_pos = np.full(4, self.joint_pos_range[1]/2.0) # home position
-		self.h_offset = 3.0*25.4 # (approx.) TODO: update from real CAD
-
-		# Calculate geometric parameters
-		# self.set_geometric_params([2, 1, 1, 3])
+		# Set up geometric parameters fro the robot
 		self.set_geometric_params([2, 0, 1, 3])
 
 		# Initialize pose in Schoenflies mode
@@ -75,7 +56,26 @@ class Robot4CRU(object):
 
 		self.inverse_kinematics(self.robot_pose_4dof)
 
+
 	def set_geometric_params(self, new_geometric_indcs):
+		# End-effector joint axis distribution angles (5 cases)
+		self.alphas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0, np.pi/2.0, np.pi/2.0 + np.pi/8.0, np.pi/2.0 + np.pi/4.0])/2.0)
+		# Base joint axis distribution angles (2 cases)
+		self.betas = np.sort(np.array([np.pi/4.0, np.pi/4.0 + np.pi/8.0]))
+		# end effector diagonal lengths (2 cases) unit in mm
+		self.eeff_diag_lengths = np.sort(np.array([6.25/np.cos(np.pi/8)-2.0, 6.25/np.cos(np.pi/8)]))*25.4
+		# base diagonal length (5 cases) unit in mm
+		self.base_diag_lengths = np.sort(np.array([	self.eeff_diag_lengths[0],
+			self.eeff_diag_lengths[1],
+			self.eeff_diag_lengths[0]*np.cos(self.alphas[1])/np.cos(self.betas[0]), 
+			self.eeff_diag_lengths[1]*np.cos(self.alphas[0])/np.cos(self.betas[0]),
+			self.eeff_diag_lengths[1]*np.cos(self.alphas[1])/np.cos(self.betas[0])	]))
+		# length of the UU couple (from CAD) unit in mm
+		self.r = (1.75*2 + 2.54)*10.0
+		self.joint_pos_range = np.array([0, 200.00])
+		self.joint_pos = np.full(4, self.joint_pos_range[1]/2.0) # home position
+		self.h_offset = 3.0*25.4 # (approx.) TODO: update from real CAD
+
 		self.geometric_indcs = new_geometric_indcs
 		self.a = self.base_diag_lengths[self.geometric_indcs[3]]/2.0*np.cos(self.betas[self.geometric_indcs[1]])
 		self.b = self.base_diag_lengths[self.geometric_indcs[3]]/2.0*np.sin(self.betas[self.geometric_indcs[1]])
@@ -122,9 +122,10 @@ class Robot4CRU(object):
 		else:
 			print "No IK Solution: at least one discriminant is negative: ", discriminants
 
-		# check the swivel angle limit on both ends of the U-U couplings: provide warning on the screen if the joint are out of ranges
-
+		# check the swivel angle limit on both ends of the U-U rod: provide warning on the screen if the joint are out of ranges
 		print all_swivel_angles
+
+
 		print all_joint_pos_sol
 		return selected_joint_pos_sol
 
@@ -228,7 +229,6 @@ class Robot4CRU(object):
 		resp_robot_4cru_ik.des_joint_postions.joint_names = ["motor_1", "motor_2", "motor_3", "motor_4"]
 		for i in range(len(req.des_poses.poses)):
 			print req.des_poses.poses[i]
-
 		return resp_robot_4cru_ik
 
 def py_ang(v1, v2):
