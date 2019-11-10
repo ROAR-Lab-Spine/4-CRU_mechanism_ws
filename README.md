@@ -17,12 +17,12 @@ cd ~/Arduino/libraries
 rosrun rosserial_arduino make_libraries.py ~/Arduino/libraries
 ```
 
-## SymPy Installation [Documentations](https://docs.sympy.org/latest/index.html) and [Downloads](https://github.com/sympy/sympy/releases)
-'''
+## SymPy Installation [Documentation](https://docs.sympy.org/latest/index.html) and [Download](https://github.com/sympy/sympy/releases)
+```
 tar zxvf sympy-<VERSION>.tar.gz
 cd sympy-<VERSION>
 sudo python setup.py install
-'''
+```
 
 ## Arduino Libraries
 - [PID](https://playground.arduino.cc/Code/PIDLibrary/)
