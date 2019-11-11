@@ -1,0 +1,3 @@
+geometry_msgs/PoseArray des_poses
+---
+trajectory_msgs/JointTrajectory des_joint_positions
