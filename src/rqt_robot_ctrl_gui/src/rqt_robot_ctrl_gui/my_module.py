@@ -14,6 +14,7 @@ from kinematic_model.srv import RobotIK, RobotIKRequest, RobotIKResponse
 
 import tf
 from tf import transformations as tfs 
+import math
 
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseArray, Pose
@@ -113,7 +114,7 @@ class MyPlugin(Plugin):
 
         # Setup service proxy for IK provided by robot_4cru node
         rospy.wait_for_service('robot_4cru')
-        self.robot_ik_service = rospy.ServiceProxy('real_robot', RobotIK)
+        self.robot_ik_service = rospy.ServiceProxy('robot_4cru', RobotIK)
         self.ik_req = RobotIKRequest()
         self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
 
@@ -213,6 +214,7 @@ class MyPlugin(Plugin):
         eeff_pose_slider_values.append(self._widget.verticalSlider_pitch_x.value())
         eeff_pose_slider_values.append(self._widget.verticalSlider_roll_y.value())
         eeff_pose_slider_values.append(self._widget.verticalSlider_yaw_z.value())
+        print eeff_pose_slider_values
         return eeff_pose_slider_values
 
     def publishAllJointPosCmd(self, values):
@@ -225,6 +227,7 @@ class MyPlugin(Plugin):
         self.pubJointPosCmdMotor2.publish()
         self.pubJointPosCmdMotor3.publish()
         self.pubJointPosCmdMotor4.publish()
+        print "published joint cmd values:", values
 
     def publishJointPosCmd(self, joint_index, value):
         self.pubJointPosCmd._message.displacements[joint_index] = value
@@ -254,12 +257,21 @@ class MyPlugin(Plugin):
         dummy_pose.position.y = eeff_pose_slider_values[1]
         dummy_pose.position.z = eeff_pose_slider_values[2]
 
-        quat = tfs.quaternion_from_euler(1, 2, 3, 'sxyz')
+        quat = tfs.quaternion_from_euler(eeff_pose_slider_values[3]/180.0*math.pi, \
+            eeff_pose_slider_values[4]/180.0*math.pi, eeff_pose_slider_values[5]/180.0*math.pi, axes='sxyz')
         dummy_pose.orientation.x = quat[0]
         dummy_pose.orientation.y = quat[1]
         dummy_pose.orientation.z = quat[2]
         dummy_pose.orientation.w = quat[3]
         self.ik_req.des_poses.poses.append(dummy_pose)
+        print self.ik_req
+        self.execute_traj()
+
+    def execute_traj(self):
+        ik_resp = self.robot_ik_service(self.ik_req)
+        for i in range(len(ik_resp.des_joint_positions.points)):
+            self.publishAllJointPosCmd(ik_resp.des_joint_positions.points[i].positions)
+
 
 class TopicPublisher(object):
 

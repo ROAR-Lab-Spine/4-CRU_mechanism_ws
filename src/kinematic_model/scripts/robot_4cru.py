@@ -84,13 +84,13 @@ class Robot4CRU(object):
 		dummy_pose.orientation.z = x_3
 		dummy_pose.orientation.w = x_0
 
-		dummy_req.des_poses.poses.append(dummy_pose)
-		dummy_req.des_poses.poses.append(dummy_pose)
+		# dummy_req.des_poses.poses.append(dummy_pose)
+		# dummy_req.des_poses.poses.append(dummy_pose)
 
 		# alternative way but yields different results when printing!
 		# dummy_req.des_poses.poses.append(Pose(Point(x = X, y = Y, z = Z), Quaternion(x= x_1, y= x_2, z = x_3, w = x_0)))
 
-		self.robot_4cru_ik(dummy_req)
+		# self.robot_4cru_ik(dummy_req)
 
 	def set_geometric_params(self, new_geometric_indcs):
 		# End-effector joint axis distribution angles (5 cases)
@@ -158,6 +158,7 @@ class Robot4CRU(object):
 				joint_pos_diff_j_index = np.argmin(np.abs(all_joint_pos_sol[i,:] - current_joint_pos[i]))
 				selected_joint_pos_sol[i] = all_joint_pos_sol[i, joint_pos_diff_j_index]
 		else:
+			# if no solution, return current joint positions
 			print "No IK Solution: at least one discriminant is negative: ", discriminants
 
 		# check the swivel angle limit on both ends of the U-U rod: provide warning on the screen if the joint are out of ranges
@@ -267,7 +268,6 @@ class Robot4CRU(object):
 			traj_point.positions = self.inverse_kinematics(req.des_poses.poses[i])
 			resp_robot_4cru_ik.des_joint_positions.points.append(traj_point)
 
-		print resp_robot_4cru_ik
 		return resp_robot_4cru_ik
 
 	def callback_joint_state(self, msg):
