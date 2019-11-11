@@ -288,6 +288,9 @@ void setup() {
 
 	// run all tasks in the loop first time once
 	des_motor_pos[0] = 100;
+	des_motor_pos[1] = 100;
+	des_motor_pos[2] = 100;
+	des_motor_pos[3] = 100;
 	tic();
 }
 
