@@ -85,15 +85,18 @@ class MyPlugin(Plugin):
         self._widget.verticalSlider_3.valueChanged[int].connect(self._handle_slider_3_value_changed)
         self._widget.verticalSlider_4.valueChanged[int].connect(self._handle_slider_4_value_changed)
 
-        self._widget.verticalSlider_x.valueChanged[int].connect(self._handle_slider_x_value_changed)
-        self._widget.verticalSlider_y.valueChanged[int].connect(self._handle_slider_y_value_changed)
-        self._widget.verticalSlider_z.valueChanged[int].connect(self._handle_slider_z_value_changed)
-        self._widget.verticalSlider_pitch_x.valueChanged[int].connect(self._handle_slider_pitch_x_value_changed)
-        self._widget.verticalSlider_roll_y.valueChanged[int].connect(self._handle_slider_roll_y_value_changed)
-        self._widget.verticalSlider_yaw_z.valueChanged[int].connect(self._handle_slider_yaw_z_value_changed)
+        self._widget.verticalSlider_x.valueChanged[int].connect(self._handle_slider_pose_value_changed)
+        self._widget.verticalSlider_y.valueChanged[int].connect(self._handle_slider_pose_value_changed)
+        self._widget.verticalSlider_z.valueChanged[int].connect(self._handle_slider_pose_value_changed)
+        self._widget.verticalSlider_pitch_x.valueChanged[int].connect(self._handle_slider_pose_value_changed)
+        self._widget.verticalSlider_roll_y.valueChanged[int].connect(self._handle_slider_pose_value_changed)
+        self._widget.verticalSlider_yaw_z.valueChanged[int].connect(self._handle_slider_pose_value_changed)
 
         self._widget.radioButton_1.toggled[bool].connect(self._handle_radio_1_toggled)
         self._widget.radioButton_2.toggled[bool].connect(self._handle_radio_2_toggled)
+
+        self._widget.pushButton_1.clicked[bool].connect(self._handle_push_1_clicked)
+        self._widget.pushButton_2.clicked[bool].connect(self._handle_push_2_clicked)
 
         # Set up Publishers
         self.pubJointPosCmd = TopicPublisher('joint_pos_cmd', JointJog)
@@ -166,36 +169,31 @@ class MyPlugin(Plugin):
     def _handle_radio_2_toggled(self, checked):
         print "Enable PIDs toggled to", checked
 
+    def _handle_push_1_clicked(self, checked):
+        self._widget.verticalSlider_1.setSliderPosition(100)
+        self._widget.verticalSlider_2.setSliderPosition(100)
+        self._widget.verticalSlider_3.setSliderPosition(100)
+        self._widget.verticalSlider_4.setSliderPosition(100)
+        print "Reset Joint Position Sliders"
+
+    def _handle_push_2_clicked(self, checked):
+        self._widget.verticalSlider_x.setSliderPosition(0)
+        self._widget.verticalSlider_y.setSliderPosition(0)
+        self._widget.verticalSlider_z.setSliderPosition(120)
+        self._widget.verticalSlider_pitch_x.setSliderPosition(0)
+        self._widget.verticalSlider_roll_y.setSliderPosition(0)
+        self._widget.verticalSlider_yaw_z.setSliderPosition(0)
+        print "Reset End-Effector Pose Sliders"
+
     # End-effector pose command
-
-    def _handle_slider_x_value_changed(self, value):
+    def _handle_slider_pose_value_changed(self, value):
         # Publish the commanded jont position values
-        print "x position changed to", value, " mm"
-        self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
-
-    def _handle_slider_y_value_changed(self, value):
-        # Publish the commanded jont position values
-        print "y position changed to", value, " mm"
-        self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
-
-    def _handle_slider_z_value_changed(self, value):
-        # Publish the commanded jont position values
-        print "z position changed to", value, " mm"
-        self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
-
-    def _handle_slider_pitch_x_value_changed(self, value):
-        # Publish the commanded jont position values
-        print "pitch_x position changed to", value, " deg"
-        self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
-
-    def _handle_slider_roll_y_value_changed(self, value):
-        # Publish the commanded jont position values
-        print "roll_y position changed to", value, " deg"
-        self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
-
-    def _handle_slider_yaw_z_value_changed(self, value):
-        # Publish the commanded jont position values
-        print "yaw_z position changed to", value, " deg"
+        print "x position changed to", self._widget.verticalSlider_x.sliderPosition(), " mm"
+        print "y position changed to", self._widget.verticalSlider_y.sliderPosition(), " mm"
+        print "z position changed to", self._widget.verticalSlider_z.sliderPosition(), " mm"
+        print "pitch_x position changed to", self._widget.verticalSlider_pitch_x.sliderPosition(), " deg"
+        print "roll_y position changed to", self._widget.verticalSlider_roll_y.sliderPosition(), " deg"
+        print "yaw_z position changed to", self._widget.verticalSlider_yaw_z.sliderPosition(), " deg"
         self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
 
     def getAllJointSliderValues(self):

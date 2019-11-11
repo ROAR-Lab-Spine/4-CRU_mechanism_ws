@@ -39,7 +39,7 @@ class Robot4CRU(object):
 		self.robot_4cru_service = rospy.Service('robot_4cru', RobotIK, self.robot_4cru_ik)
 
 		# Set up constant geometric parameters for the robot
-		self.set_geometric_params([2, 0, 1, 3])
+		self.set_geometric_params([1, 0, 0, 4])
 
 		# Intialize fixed robot tf
 		self.robot_base_tfm = tf.TransformerROS(True, rospy.Duration(10.0))
@@ -106,7 +106,7 @@ class Robot4CRU(object):
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[0])/np.cos(self.betas[0]),
 			self.eeff_diag_lengths[1]*np.cos(self.alphas[1])/np.cos(self.betas[0])	]))
 		# length of the UU couple (from CAD) unit in mm
-		self.r = (1.75*2 + 2.54)*10.0
+		self.r = (1.75*2 + 2.54*2)*10.0
 		self.joint_pos_range = np.array([0, 200.00])
 		self.joint_pos = np.full(4, self.joint_pos_range[1]/2.0) # home position
 		self.h_offset = 3.0*25.4 # (approx.) TODO: update from real CAD

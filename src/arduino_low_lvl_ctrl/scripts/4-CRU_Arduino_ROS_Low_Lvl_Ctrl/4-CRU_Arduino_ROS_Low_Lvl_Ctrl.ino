@@ -80,7 +80,7 @@ float des_pos[4];
 float des_vel[4];
 
 // initialize PID controller
-double Kp = 10, Ki = 0.1, Kd=0;
+double Kp = 10, Ki = 0.5, Kd=0;
 PID motor1_PID(&motor_pos[0], &motor_pwm[0], &des_motor_pos[0], Kp, Ki, Kd, DIRECT);
 PID motor2_PID(&motor_pos[1], &motor_pwm[1], &des_motor_pos[1], Kp, Ki, Kd, DIRECT);
 PID motor3_PID(&motor_pos[2], &motor_pwm[2], &des_motor_pos[2], Kp, Ki, Kd, DIRECT);
