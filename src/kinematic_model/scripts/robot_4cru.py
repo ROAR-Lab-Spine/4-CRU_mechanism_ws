@@ -7,32 +7,70 @@ from tf import transformations as tfs
 # See the library at https://github.com/ROAR-Lab-Spine/geometry/blob/melodic-devel/tf/src/tf/transformations.py
 import time
 
-from geometry_msgs.msg import PoseArray, Pose, Point, Quaternion
 from kinematic_model.srv import RobotIK, RobotIKRequest, RobotIKResponse
+from geometry_msgs.msg import TransformStamped, PoseArray, Pose, Point, Quaternion
+from trajectory_msgs.msg import JointTrajectoryPoint
+from control_msgs.msg import JointJog
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
 
 import numpy as np
+import numpy.matlib
 import numpy.linalg as la
 import math
 from sympy import * # symbolic calculation for IK
 
 # tips: We can use ipython to test things around! (remeber to >> from tf import transformations)
+# Word Conventions
+# 	tfm: tf.TransformerROS() using with TransformStamped
+#	pose: geometry_msgs.msg.Pose()
+#   tf_mat: numpy.matrix 4x4 representation of the transform
+#   tfstamp = TransformStamped()
 
 class Robot4CRU(object):
 	"""class of Robot_4CRU"""
 	def __init__(self):
 		super(Robot4CRU, self).__init__()
 
-		# Create service for inverse kinematics
-		self.robot_4cru_service = rospy.Service('fake_robot', RobotIK, self.robot_4cru_ik)
+		# Create subsciber for joint states published from arduino
+		self.sub_joint_states = rospy.Subscriber("joint_state", JointState, self.callback_joint_state)
 
-		# Set up geometric parameters fro the robot
+		# Create service for inverse kinematics
+		self.robot_4cru_service = rospy.Service('robot_4cru', RobotIK, self.robot_4cru_ik)
+
+		# Set up constant geometric parameters for the robot
 		self.set_geometric_params([2, 0, 1, 3])
+
+		# Intialize fixed robot tf
+		self.robot_base_tfm = tf.TransformerROS(True, rospy.Duration(10.0))
+		robot_base_tfstamp = TransformStamped()
+		robot_base_tfstamp.header.frame_id = 'base_coordinate'
+		robot_base_tfstamp.header.stamp = rospy.Time.now() 
+		robot_base_tfstamp.child_frame_id = 'eeff_coordinate'
+		robot_base_tfstamp.transform.rotation.w = 1.0 # set valid quaternion
+		self.robot_base_tfm.setTransform(robot_base_tfstamp)
+
+		# print self.robot_base_tfm.asMatrix('base_coordinate', robot_base_tfstamp.header)
+
+		# Initialize end-effector home config
+		# self.robot_current_tfm = pose_base_to_eeff
+		# pose_home = TransformStamped()
+		# pose_home.header.frame_id = 'eeff_coordinate'
+		# pose_home.child_frame_id = 'eeff_coordinate'
+
+		# Initialize current joint state
+		self.current_joint_state = JointState()
+		self.current_joint_state.header.stamp = rospy.Time.now()
+		self.current_joint_state.name = ["motor_1", "motor_2", "motor_3", "motor_4"]
+		self.current_joint_state.position = [100.0, 100.0, 100.0, 100.0]
+		# print self.current_joint_state
+
 
 		# Initialize pose in Schoenflies mode
 		self.operation_mode = "H1"
-		self.robot_pose_4dof = np.array([10, 20, 120.0, np.pi/12])
+		self.robot_pose_4dof = np.array([10, 10, 120.0, np.pi/12])
 
-		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(self.robot_pose_4dof)
+		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_tf_mat_and_7var(self.robot_pose_4dof)
 		self.robot_pose = pose_base_to_eeff
 
 		# test the ik function
@@ -53,9 +91,6 @@ class Robot4CRU(object):
 		# dummy_req.des_poses.poses.append(Pose(Point(x = X, y = Y, z = Z), Quaternion(x= x_1, y= x_2, z = x_3, w = x_0)))
 
 		self.robot_4cru_ik(dummy_req)
-
-		self.inverse_kinematics(self.robot_pose_4dof)
-
 
 	def set_geometric_params(self, new_geometric_indcs):
 		# End-effector joint axis distribution angles (5 cases)
@@ -103,11 +138,12 @@ class Robot4CRU(object):
 		print "[a, b, c, d] = ", [self.a, self.b, self.c, self.d], " mm"
 		print "r = ", self.r, " mm"
 
-	def inverse_kinematics(self, pose_4dof):
-		reals, discriminants, has_solution = self.check_ik_feasible(pose_4dof)
-		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(pose_4dof)
+	def inverse_kinematics(self, pose_base_to_eeff):
+		reals, discriminants, has_solution = self.check_ik_feasible(pose_base_to_eeff)
 		all_joint_pos_sol = np.full((4, 2), self.joint_pos_range[1]/2.0) # home position as default value
 		all_swivel_angles = np.zeros((4,2)) # indices [joint_no, U1/U2]
+		current_joint_pos = np.array(self.current_joint_state.position)
+		selected_joint_pos_sol = current_joint_pos
 
 		if has_solution:
 			for i in range(4):
@@ -116,21 +152,22 @@ class Robot4CRU(object):
 						all_joint_pos_sol[i,j] = reals[i] - np.sqrt(discriminants[i]) - self.h_offset
 					elif j == 1:
 						all_joint_pos_sol[i,j] = reals[i] + np.sqrt(discriminants[i]) - self.h_offset
-					swivel_angle_U1, swivel_angle_U2 = self.calc_swivel_angle(pose_base_to_eeff, all_joint_pos_sol[i,0], i)
+					swivel_angle_U1, swivel_angle_U2 = self.calc_swivel_angle(pose_base_to_eeff, all_joint_pos_sol[i,1], i)
 					all_swivel_angles[i,0] = swivel_angle_U1
 					all_swivel_angles[i,1] = swivel_angle_U2
+				joint_pos_diff_j_index = np.argmin(np.abs(all_joint_pos_sol[i,:] - current_joint_pos[i]))
+				selected_joint_pos_sol[i] = all_joint_pos_sol[i, joint_pos_diff_j_index]
 		else:
 			print "No IK Solution: at least one discriminant is negative: ", discriminants
 
 		# check the swivel angle limit on both ends of the U-U rod: provide warning on the screen if the joint are out of ranges
-		print all_swivel_angles
+		print "IK joint pos solutions: ", selected_joint_pos_sol
+		print "swivel angles (deg): ", np.rad2deg(all_swivel_angles)
 
-
-		print all_joint_pos_sol
-		return selected_joint_pos_sol
+		return selected_joint_pos_sol.tolist()
 
 	def calc_swivel_angle(self, pose_base_to_eeff, joint_pos, joint_index):
-		X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_mat_to_7var(pose_base_to_eeff)
+		X, Y, Z, x_0, x_1, x_2, x_3 = get_7var_from_pose(pose_base_to_eeff)
 		
 		# convert signs based on joint indices
 		if joint_index == 0:
@@ -155,8 +192,8 @@ class Robot4CRU(object):
 
 		return swivel_angle_U1, swivel_angle_U2
 
-	def check_ik_feasible(self, pose_4dof):
-		pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_4dof_to_pose_and_7var(pose_4dof)
+	def check_ik_feasible(self, pose_base_to_eeff):		
+		X, Y, Z, x_0, x_1, x_2, x_3 = get_7var_from_pose(pose_base_to_eeff)
 		r = self.r
 		
 		reals = np.zeros([4])
@@ -200,36 +237,50 @@ class Robot4CRU(object):
 		
 		return reals, discriminants, has_solution
 
-	def convert_pose_4dof_to_pose_and_7var(self, pose_4dof):
+	def convert_pose_4dof_to_tf_mat_and_7var(self, pose_4dof):
 		if self.operation_mode == "H1":
 			t_mat = tfs.translation_matrix((pose_4dof[0], pose_4dof[1], pose_4dof[2]))
 			r_mat = tfs.rotation_matrix(pose_4dof[3], (0, 0, 1))
-			pose_base_to_eeff = tfs.concatenate_matrices(t_mat, r_mat)
+			tf_mat_base_to_eeff = tfs.concatenate_matrices(t_mat, r_mat)
 		if self.operation_mode == "H3":
 			# break down to geometric cases
 			pass
 		else:
 			pass
 
-		X, Y, Z, x_0, x_1, x_2, x_3 = self.convert_pose_mat_to_7var(pose_base_to_eeff)
+		X, Y, Z, x_0, x_1, x_2, x_3 = convert_tf_mat_to_7var(tf_mat_base_to_eeff)
 
-		return pose_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3
+		return tf_mat_base_to_eeff, X, Y, Z, x_0, x_1, x_2, x_3
 
-	def convert_pose_mat_to_7var(self, pose_mat):
-		quat = tfs.quaternion_from_matrix(pose_mat)
-		xyz = tfs.translation_from_matrix(pose_mat)
-		X = xyz[0]; Y = xyz[1]; Z = xyz[2] 
-		x_0 = quat[3]; x_1 = quat[0]; x_2 = quat[1]; x_3 = quat[2]
-		return X, Y, Z, x_0, x_1, x_2, x_3
 
 	def robot_4cru_ik(self, req):
 		# Get req as datatype PoseArray des_poses (http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PoseArray.html)
-		# Give resp as datatype JointTrajectory des_joint_postions (http://docs.ros.org/api/trajectory_msgs/html/msg/JointTrajectory.html)
+		# Give resp as datatype JointTrajectory des_joint_positions (http://docs.ros.org/api/trajectory_msgs/html/msg/JointTrajectory.html)
 		resp_robot_4cru_ik = RobotIKResponse()
-		resp_robot_4cru_ik.des_joint_postions.joint_names = ["motor_1", "motor_2", "motor_3", "motor_4"]
+		resp_robot_4cru_ik.des_joint_positions.joint_names = ["motor_1", "motor_2", "motor_3", "motor_4"]
+		resp_robot_4cru_ik.des_joint_positions.header.stamp = rospy.Time.now() 
+		resp_robot_4cru_ik.des_joint_positions.header.frame_id = 'des_joint_positions'
+
 		for i in range(len(req.des_poses.poses)):
-			print req.des_poses.poses[i]
+			# print req.des_poses.poses[i]
+			traj_point = JointTrajectoryPoint()
+			traj_point.positions = self.inverse_kinematics(req.des_poses.poses[i])
+			resp_robot_4cru_ik.des_joint_positions.points.append(traj_point)
+
+		print resp_robot_4cru_ik
 		return resp_robot_4cru_ik
+
+	def callback_joint_state(self, msg):
+		# Update the joint states sent from Arduino
+		self.current_joint_state = msg
+
+
+def convert_tf_mat_to_7var(tf_mat):
+	quat = tfs.quaternion_from_matrix(tf_mat)
+	xyz = tfs.translation_from_matrix(tf_mat)
+	X = xyz[0]; Y = xyz[1]; Z = xyz[2] 
+	x_0 = quat[3]; x_1 = quat[0]; x_2 = quat[1]; x_3 = quat[2]
+	return X, Y, Z, x_0, x_1, x_2, x_3
 
 def py_ang(v1, v2):
 		""" Returns the angle in radians between vectors 'v1' and 'v2'    """
@@ -237,10 +288,31 @@ def py_ang(v1, v2):
 		sinang = la.norm(np.cross(v1, v2))
 		return np.arctan2(sinang, cosang)
 
+def convert_7var_to_pose(X, Y, Z, x_0, x_1, x_2, x_3):
+	dummy_pose = Pose()
+	dummy_pose.position.x = X
+	dummy_pose.position.y = Y
+	dummy_pose.position.z = Z
+	dummy_pose.orientation.x = x_1
+	dummy_pose.orientation.y = x_2
+	dummy_pose.orientation.z = x_3
+	dummy_pose.orientation.w = x_0
+	return dummy_pose
+
+def get_7var_from_pose(pose):
+	X = pose.position.x
+	Y = pose.position.y
+	Z = pose.position.z
+	x_1 = pose.orientation.x
+	x_2 = pose.orientation.y
+	x_3 = pose.orientation.z
+	x_0 = pose.orientation.w
+	return X, Y, Z, x_0, x_1, x_2, x_3
+
 def main():
 	rospy.init_node('robot_4cru', anonymous=True)
 	robot = Robot4CRU()
-	print "Spinning..."
+	print "Spinning robot_4cru node ..."
 	rospy.spin()
 
 if __name__ == '__main__':

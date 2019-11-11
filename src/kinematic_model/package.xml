@@ -67,8 +67,13 @@
  <!-- added msgs for RobotIK.srv -->
   <build_depend>geometry_msgs</build_depend>
   <build_depend>trajectory_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>control_msgs</build_depend>
+
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

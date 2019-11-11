@@ -1,0 +1,5 @@
+<launch> 
+
+	<node name="robot_4cru" pkg="kinematic_model" type="robot_4cru.py"/>
+
+</launch>

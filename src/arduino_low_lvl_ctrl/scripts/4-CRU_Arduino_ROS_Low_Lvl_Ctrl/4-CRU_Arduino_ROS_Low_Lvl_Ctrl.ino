@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
 /*
-Devices: 
+List of devices and ICs: 
 	- Arduino MEGA 2560 Rev3
 	- Pololu G2 High-Power Motor Driver 18v17 (https://www.pololu.com/product/2991)
 	- Acutuonix T16-200-64-12-P (https://www.actuonix.com/T16-P-Mini-Track-Actuator-p/t16-p.htm)
@@ -239,6 +239,7 @@ void tic(){
 	getJointFeedbacks();
 	computePIDs();
 	driveAllMotors( motor_pwm );
+	nh.spinOnce();
 }
 
 // Create time action for controlling the period
@@ -286,14 +287,16 @@ void setup() {
 	des_joint_state.displacements_length=4;
 	des_joint_state.velocities_length=4;
 
-	// run all tasks in the loop first time once
+	// run all tasks in the loop once first time
 	des_motor_pos[0] = 100;
+	des_motor_pos[1] = 100;
+	des_motor_pos[2] = 100;
+	des_motor_pos[3] = 100;
 	tic();
 }
 
 void loop() {
   	// Put your main code here, to run repeatedly:
 	jointStateAction.check();
-	nh.spinOnce();
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
