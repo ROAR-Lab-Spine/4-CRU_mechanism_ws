@@ -239,7 +239,6 @@ void tic(){
 	getJointFeedbacks();
 	computePIDs();
 	driveAllMotors( motor_pwm );
-	nh.spinOnce();
 }
 
 // Create time action for controlling the period
@@ -298,5 +297,6 @@ void setup() {
 void loop() {
   	// Put your main code here, to run repeatedly:
 	jointStateAction.check();
+	nh.spinOnce();
 }
 ///////////////////////////////////////////////////////////////////////////////////////////

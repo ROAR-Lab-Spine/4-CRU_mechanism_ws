@@ -18,7 +18,7 @@ import numpy as np
 import numpy.matlib
 import numpy.linalg as la
 import math
-from sympy import * # symbolic calculation for IK
+# from sympy import * # symbolic calculation for IK
 
 # tips: We can use ipython to test things around! (remeber to >> from tf import transformations)
 # Word Conventions

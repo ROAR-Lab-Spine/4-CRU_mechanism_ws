@@ -210,10 +210,10 @@
     <item>
      <widget class="QSlider" name="verticalSlider_x">
       <property name="minimum">
-       <number>-20</number>
+       <number>-50</number>
       </property>
       <property name="maximum">
-       <number>20</number>
+       <number>50</number>
       </property>
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -223,10 +223,10 @@
     <item>
      <widget class="QSlider" name="verticalSlider_y">
       <property name="minimum">
-       <number>-20</number>
+       <number>-50</number>
       </property>
       <property name="maximum">
-       <number>20</number>
+       <number>50</number>
       </property>
       <property name="orientation">
        <enum>Qt::Vertical</enum>
