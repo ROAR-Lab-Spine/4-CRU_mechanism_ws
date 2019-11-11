@@ -1,9 +1,11 @@
 <launch> 
 
-	<node name="serial_node" pkg="rosserial_python" type="serial_node.py">
+	<node name="serial_node" pkg="rosserial_python" type="serial_node.py" required="true">
 		<!-- Change the port name for Arduino Mega 2560 -->
 		<param name="port" value="/dev/ttyACM0"/> 
 	</node>
+
+	<node name="robot_4cru" pkg="kinematic_model" type="robot_4cru.py" output="screen" required="true"/>
 
 	<!-- <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen" required="true" /> -->
 
