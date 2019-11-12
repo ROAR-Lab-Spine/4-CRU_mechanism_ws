@@ -92,11 +92,13 @@ class MyPlugin(Plugin):
         self._widget.verticalSlider_roll_y.valueChanged[int].connect(self._handle_slider_pose_value_changed)
         self._widget.verticalSlider_yaw_z.valueChanged[int].connect(self._handle_slider_pose_value_changed)
 
-        self._widget.radioButton_1.toggled[bool].connect(self._handle_radio_1_toggled)
-        self._widget.radioButton_2.toggled[bool].connect(self._handle_radio_2_toggled)
+        # self._widget.radioButton_1.toggled[bool].connect(self._handle_radio_1_toggled)
+
 
         self._widget.pushButton_1.clicked[bool].connect(self._handle_push_1_clicked)
         self._widget.pushButton_2.clicked[bool].connect(self._handle_push_2_clicked)
+        self._widget.pushButton_2.clicked[bool].connect(self._handle_push_2_clicked)
+        self._widget.pushButtonExecuteTraj.clicked[bool].connect(self._handle_push_execute_traj_clicked)
 
         # Set up Publishers
         self.pubJointPosCmd = TopicPublisher('joint_pos_cmd', JointJog)
@@ -120,6 +122,7 @@ class MyPlugin(Plugin):
         self.robot_ik_service = rospy.ServiceProxy('robot_4cru', RobotIK)
         self.ik_req = RobotIKRequest()
         self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
+        self.execute_traj()
 
         def shutdown_plugin(self):
         # TODO unregister all publishers here
@@ -163,11 +166,8 @@ class MyPlugin(Plugin):
         print "motor 4 position changed to", value, " mm"
         self.publishJointPosCmd(3, value)
 
-    def _handle_radio_1_toggled(self, checked):
-        print "Enable Motors toggled to", checked
-
-    def _handle_radio_2_toggled(self, checked):
-        print "Enable PIDs toggled to", checked
+    # def _handle_radio_1_toggled(self, checked):
+    #     print "Enable Motors toggled to", checked
 
     def _handle_push_1_clicked(self, checked):
         self._widget.verticalSlider_1.setSliderPosition(100)
@@ -177,13 +177,35 @@ class MyPlugin(Plugin):
         print "Reset Joint Position Sliders"
 
     def _handle_push_2_clicked(self, checked):
+        print "Reset End-Effector Pose Sliders"
+        # # Disable all tracking to prevented repeated activation
+        # self._widget.verticalSlider_x.setTracking(False)
+        # self._widget.verticalSlider_y.setTracking(False)
+        # self._widget.verticalSlider_z.setTracking(False)
+        # self._widget.verticalSlider_pitch_x.setTracking(False)
+        # self._widget.verticalSlider_roll_y.setTracking(False)
+        # self._widget.verticalSlider_yaw_z.setTracking(False)
+
         self._widget.verticalSlider_x.setSliderPosition(0)
         self._widget.verticalSlider_y.setSliderPosition(0)
         self._widget.verticalSlider_z.setSliderPosition(120)
         self._widget.verticalSlider_pitch_x.setSliderPosition(0)
         self._widget.verticalSlider_roll_y.setSliderPosition(0)
         self._widget.verticalSlider_yaw_z.setSliderPosition(0)
-        print "Reset End-Effector Pose Sliders"
+
+        # Reactivate the tracking
+        # self._widget.verticalSlider_x.setTracking(True)
+        # self._widget.verticalSlider_y.setTracking(True)
+        # self._widget.verticalSlider_z.setTracking(True)
+        # self._widget.verticalSlider_pitch_x.setTracking(True)
+        # self._widget.verticalSlider_roll_y.setTracking(True)
+        # self._widget.verticalSlider_yaw_z.setTracking(True)
+
+        # Trigger action once 
+        # self._handle_slider_pose_value_changed(0)
+    def _handle_push_execute_traj_clicked(self, checked):
+        # self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
+        self.execute_traj()
 
     # End-effector pose command
     def _handle_slider_pose_value_changed(self, value):
@@ -193,7 +215,7 @@ class MyPlugin(Plugin):
         print "z position changed to", self._widget.verticalSlider_z.sliderPosition(), " mm"
         print "pitch_x position changed to", self._widget.verticalSlider_pitch_x.sliderPosition(), " deg"
         print "roll_y position changed to", self._widget.verticalSlider_roll_y.sliderPosition(), " deg"
-        print "yaw_z position changed to", self._widget.verticalSlider_yaw_z.sliderPosition(), " deg"
+        print "yaw_z position changed to", self._widget.verticalSlider_yaw_z.sliderPosition(), " deg \n"
         self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
 
     def getAllJointSliderValues(self):
@@ -250,26 +272,24 @@ class MyPlugin(Plugin):
     def update_ik_req(self, eeff_pose_slider_values):
         # reset value everytime for the time being (single point command only)
         self.ik_req = RobotIKRequest()
-        dummy_pose = Pose()
-        dummy_pose.position.x = eeff_pose_slider_values[0]
-        dummy_pose.position.y = eeff_pose_slider_values[1]
-        dummy_pose.position.z = eeff_pose_slider_values[2]
+        des_pose = Pose()
+        des_pose.position.x = eeff_pose_slider_values[0]
+        des_pose.position.y = eeff_pose_slider_values[1]
+        des_pose.position.z = eeff_pose_slider_values[2]
 
         quat = tfs.quaternion_from_euler(eeff_pose_slider_values[3]/180.0*math.pi, \
             eeff_pose_slider_values[4]/180.0*math.pi, eeff_pose_slider_values[5]/180.0*math.pi, axes='sxyz')
-        dummy_pose.orientation.x = quat[0]
-        dummy_pose.orientation.y = quat[1]
-        dummy_pose.orientation.z = quat[2]
-        dummy_pose.orientation.w = quat[3]
-        self.ik_req.des_poses.poses.append(dummy_pose)
-        print self.ik_req
-        self.execute_traj()
+        des_pose.orientation.x = quat[0]
+        des_pose.orientation.y = quat[1]
+        des_pose.orientation.z = quat[2]
+        des_pose.orientation.w = quat[3]
+        self.ik_req.des_poses.poses.append(des_pose)
+        self.ik_resp = self.robot_ik_service(self.ik_req)
+        print self.ik_req, "\n"
 
     def execute_traj(self):
-        ik_resp = self.robot_ik_service(self.ik_req)
-        for i in range(len(ik_resp.des_joint_positions.points)):
-            self.publishAllJointPosCmd(ik_resp.des_joint_positions.points[i].positions)
-
+        for i in range(len(self.ik_resp.des_joint_positions.points)):
+            self.publishAllJointPosCmd(self.ik_resp.des_joint_positions.points[i].positions)
 
 class TopicPublisher(object):
 

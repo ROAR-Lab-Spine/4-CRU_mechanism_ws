@@ -39,7 +39,8 @@ class Robot4CRU(object):
 		self.robot_4cru_service = rospy.Service('robot_4cru', RobotIK, self.robot_4cru_ik)
 
 		# Set up constant geometric parameters for the robot
-		self.set_geometric_params([1, 0, 0, 4])
+		# self.set_geometric_params([1, 0, 0, 4]) # good schoenfiles workspace r =  85.8  mm(H_1 only)
+		self.set_geometric_params([1, 0, 0, 1]) # Condition A
 
 		# Intialize fixed robot tf
 		self.robot_base_tfm = tf.TransformerROS(True, rospy.Duration(10.0))
