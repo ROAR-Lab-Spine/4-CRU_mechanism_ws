@@ -43,10 +43,10 @@
      <item>
       <widget class="QSlider" name="verticalSlider_1">
        <property name="maximum">
-        <number>200</number>
+        <number>300</number>
        </property>
        <property name="sliderPosition">
-        <number>100</number>
+        <number>150</number>
        </property>
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -59,10 +59,13 @@
      <item>
       <widget class="QSlider" name="verticalSlider_2">
        <property name="maximum">
-        <number>200</number>
+        <number>300</number>
+       </property>
+       <property name="value">
+        <number>150</number>
        </property>
        <property name="sliderPosition">
-        <number>100</number>
+        <number>150</number>
        </property>
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -75,10 +78,10 @@
      <item>
       <widget class="QSlider" name="verticalSlider_3">
        <property name="maximum">
-        <number>200</number>
+        <number>300</number>
        </property>
        <property name="sliderPosition">
-        <number>100</number>
+        <number>150</number>
        </property>
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -91,10 +94,16 @@
      <item>
       <widget class="QSlider" name="verticalSlider_4">
        <property name="maximum">
-        <number>200</number>
+        <number>300</number>
+       </property>
+       <property name="singleStep">
+        <number>1</number>
+       </property>
+       <property name="value">
+        <number>150</number>
        </property>
        <property name="sliderPosition">
-        <number>100</number>
+        <number>150</number>
        </property>
        <property name="orientation">
         <enum>Qt::Vertical</enum>
@@ -286,7 +295,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="pushButton_1">
+  <widget class="QPushButton" name="pushButton_reset_des_joint_pos">
    <property name="geometry">
     <rect>
      <x>270</x>
@@ -299,7 +308,7 @@
     <string>Reset Joint Inputs</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="pushButton_reset_des_ee_pose">
    <property name="geometry">
     <rect>
      <x>270</x>
@@ -341,7 +350,7 @@
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QRadioButton" name="radioButton_4">
+  <widget class="QRadioButton" name="radioButton_switch_des_joint_pos_input">
    <property name="geometry">
     <rect>
      <x>270</x>
@@ -351,7 +360,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Toggle Slider/Numeric Joint I/O</string>
+    <string>Toggle Slider/Numeric Joint Input/Output</string>
    </property>
    <property name="autoExclusive">
     <bool>false</bool>
@@ -393,7 +402,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Toggle Slider/Numeric Pose I/O</string>
+    <string>Numeric Pose Input</string>
    </property>
    <property name="autoExclusive">
     <bool>false</bool>
@@ -491,7 +500,7 @@
         <widget class="QWidget" name="layoutWidget">
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_7">
+           <widget class="QDoubleSpinBox" name="doubleSpinBox_des_ang_pos_1">
             <property name="minimumSize">
              <size>
               <width>63</width>
@@ -607,7 +616,7 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_10">
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_8">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_motor_des_pos_1">
         <property name="minimumSize">
          <size>
           <width>71</width>
@@ -615,12 +624,15 @@
          </size>
         </property>
         <property name="maximum">
-         <double>200.000000000000000</double>
+         <double>300.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>150.000000000000000</double>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_motor_des_pos_2">
         <property name="minimumSize">
          <size>
           <width>71</width>
@@ -628,12 +640,15 @@
          </size>
         </property>
         <property name="maximum">
-         <double>200.000000000000000</double>
+         <double>300.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>150.000000000000000</double>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_9">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_motor_des_pos_3">
         <property name="minimumSize">
          <size>
           <width>71</width>
@@ -641,12 +656,15 @@
          </size>
         </property>
         <property name="maximum">
-         <double>200.000000000000000</double>
+         <double>300.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>150.000000000000000</double>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_10">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_motor_des_pos_4">
         <property name="minimumSize">
          <size>
           <width>71</width>
@@ -654,7 +672,10 @@
          </size>
         </property>
         <property name="maximum">
-         <double>200.000000000000000</double>
+         <double>300.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>150.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -732,7 +753,7 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_x_des_pos">
         <property name="minimumSize">
          <size>
           <width>79</width>
@@ -742,7 +763,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_y_des_pos">
         <property name="minimumSize">
          <size>
           <width>79</width>
@@ -752,7 +773,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_z_des_pos">
         <property name="minimumSize">
          <size>
           <width>79</width>
@@ -828,7 +849,7 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_13">
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_14">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_kp">
         <property name="minimumSize">
          <size>
           <width>83</width>
@@ -836,12 +857,21 @@
          </size>
         </property>
         <property name="decimals">
-         <number>5</number>
+         <number>2</number>
+        </property>
+        <property name="maximum">
+         <double>1005.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>50.000000000000000</double>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_15">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_ki">
         <property name="minimumSize">
          <size>
           <width>83</width>
@@ -850,11 +880,17 @@
         </property>
         <property name="decimals">
          <number>5</number>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
+        </property>
+        <property name="value">
+         <double>11.000000000000000</double>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_16">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_kd">
         <property name="minimumSize">
          <size>
           <width>83</width>
@@ -863,6 +899,12 @@
         </property>
         <property name="decimals">
          <number>5</number>
+        </property>
+        <property name="singleStep">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="value">
+         <double>0.100000000000000</double>
         </property>
        </widget>
       </item>
@@ -870,7 +912,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="pushButton_5">
+  <widget class="QPushButton" name="pushButton_update_PID">
    <property name="geometry">
     <rect>
      <x>470</x>

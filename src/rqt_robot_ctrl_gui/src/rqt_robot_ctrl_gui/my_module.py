@@ -92,13 +92,18 @@ class MyPlugin(Plugin):
         self._widget.verticalSlider_roll_y.valueChanged[int].connect(self._handle_slider_pose_value_changed)
         self._widget.verticalSlider_yaw_z.valueChanged[int].connect(self._handle_slider_pose_value_changed)
 
-        # self._widget.radioButton_1.toggled[bool].connect(self._handle_radio_1_toggled)
+        # DoubleSpinBox
+        self._widget.doubleSpinBox_motor_des_pos_1.valueChanged[float].connect(self._handle_double_spin_box_des_motor_pos_1)
+        self._widget.doubleSpinBox_motor_des_pos_2.valueChanged[float].connect(self._handle_double_spin_box_des_motor_pos_2)
+        self._widget.doubleSpinBox_motor_des_pos_3.valueChanged[float].connect(self._handle_double_spin_box_des_motor_pos_3)
+        self._widget.doubleSpinBox_motor_des_pos_4.valueChanged[float].connect(self._handle_double_spin_box_des_motor_pos_4)
 
+        self._widget.radioButton_switch_des_joint_pos_input.toggled[bool].connect(self._handle_radio_switch_des_joint_pos_input)
 
-        self._widget.pushButton_1.clicked[bool].connect(self._handle_push_1_clicked)
-        self._widget.pushButton_2.clicked[bool].connect(self._handle_push_2_clicked)
-        self._widget.pushButton_2.clicked[bool].connect(self._handle_push_2_clicked)
+        self._widget.pushButton_reset_des_joint_pos.clicked[bool].connect(self._handle_push_reset_des_joint_pos)
+        self._widget.pushButton_reset_des_ee_pose.clicked[bool].connect(self._handle_push_reset_des_ee_pose)
         self._widget.pushButtonExecuteTraj.clicked[bool].connect(self._handle_push_execute_traj_clicked)
+        self._widget.pushButton_update_PID.clicked[bool].connect(self._handle_push_update_PID)
 
         # Set up Publishers
         self.pubJointPosCmd = TopicPublisher('joint_pos_cmd', JointJog)
@@ -116,6 +121,10 @@ class MyPlugin(Plugin):
         self.pubJointPosCmdMotor2._message.data = init_slider_pos[1]
         self.pubJointPosCmdMotor3._message.data = init_slider_pos[2]
         self.pubJointPosCmdMotor4._message.data = init_slider_pos[3]
+        # pubisher for PID gains
+        self.pubKp = TopicPublisher('pid_kp', Float32)
+        self.pubKi = TopicPublisher('pid_ki', Float32)
+        self.pubKd = TopicPublisher('pid_kd', Float32)
 
         # Setup service proxy for IK provided by robot_4cru node
         rospy.wait_for_service('robot_4cru')
@@ -148,35 +157,63 @@ class MyPlugin(Plugin):
     # TODO: shrink to fewer handler functions
     def _handle_slider_1_value_changed(self, value):
         # Publish the commanded jont position values
-        print "motor 1 position changed to", value, " mm"
-        self.publishJointPosCmd(0, value)
+        print "motor 1 slider position changed to", value, " mm"
+        if not self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(0, value)
 
     def _handle_slider_2_value_changed(self, value):
         # Publish the commanded jont position values
-        print "motor 2 position changed to", value, " mm"
-        self.publishJointPosCmd(1, value)
+        print "motor 2 slider position changed to", value, " mm"
+        if not self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(1, value)
 
     def _handle_slider_3_value_changed(self, value):
         # Publish the commanded jont position values
-        print "motor 3 position changed to", value, " mm"
-        self.publishJointPosCmd(2, value)
+        print "motor 3 slider position changed to", value, " mm"
+        if not self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(2, value)
 
     def _handle_slider_4_value_changed(self, value):
         # Publish the commanded jont position values
         print "motor 4 position changed to", value, " mm"
-        self.publishJointPosCmd(3, value)
+        if not self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(3, value)
+
+    def _handle_double_spin_box_des_motor_pos_1(self, value):
+        if self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(0, value)
+
+    def _handle_double_spin_box_des_motor_pos_2(self, value):
+        if self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(1, value)
+
+    def _handle_double_spin_box_des_motor_pos_3(self, value):
+        if self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(2, value)
+
+    def _handle_double_spin_box_des_motor_pos_4(self, value):
+        if self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self.publishJointPosCmd(3, value)
 
     # def _handle_radio_1_toggled(self, checked):
     #     print "Enable Motors toggled to", checked
 
-    def _handle_push_1_clicked(self, checked):
-        self._widget.verticalSlider_1.setSliderPosition(100)
-        self._widget.verticalSlider_2.setSliderPosition(100)
-        self._widget.verticalSlider_3.setSliderPosition(100)
-        self._widget.verticalSlider_4.setSliderPosition(100)
-        print "Reset Joint Position Sliders"
+    def _handle_push_reset_des_joint_pos(self, checked):
+        # reset des joint pos only in the current input mode
+        if self._widget.radioButton_switch_des_joint_pos_input.isChecked():
+            self._widget.doubleSpinBox_motor_des_pos_1.setValue(150)
+            self._widget.doubleSpinBox_motor_des_pos_2.setValue(150)
+            self._widget.doubleSpinBox_motor_des_pos_3.setValue(150)
+            self._widget.doubleSpinBox_motor_des_pos_4.setValue(150)
+        else:
+            self._widget.verticalSlider_1.setSliderPosition(150)
+            self._widget.verticalSlider_2.setSliderPosition(150)
+            self._widget.verticalSlider_3.setSliderPosition(150)
+            self._widget.verticalSlider_4.setSliderPosition(150)
+            print "Reset Joint Position Sliders"
 
-    def _handle_push_2_clicked(self, checked):
+
+    def _handle_push_reset_des_ee_pose(self, checked):
         print "Reset End-Effector Pose Sliders"
         # # Disable all tracking to prevented repeated activation
         # self._widget.verticalSlider_x.setTracking(False)
@@ -188,7 +225,7 @@ class MyPlugin(Plugin):
 
         self._widget.verticalSlider_x.setSliderPosition(0)
         self._widget.verticalSlider_y.setSliderPosition(0)
-        self._widget.verticalSlider_z.setSliderPosition(120)
+        self._widget.verticalSlider_z.setSliderPosition(150)
         self._widget.verticalSlider_pitch_x.setSliderPosition(0)
         self._widget.verticalSlider_roll_y.setSliderPosition(0)
         self._widget.verticalSlider_yaw_z.setSliderPosition(0)
@@ -207,6 +244,18 @@ class MyPlugin(Plugin):
         # self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
         self.execute_traj()
 
+    def _handle_push_update_PID(self, checked):
+        kp = self._widget.doubleSpinBox_kp.value()
+        ki = self._widget.doubleSpinBox_ki.value()
+        kd = self._widget.doubleSpinBox_kd.value()
+        self.pubKp._message.data = kp
+        self.pubKi._message.data = ki
+        self.pubKd._message.data = kd
+        self.pubKp.publish()
+        self.pubKi.publish()
+        self.pubKd.publish()
+        print "published PID gains:", kp, " ", ki, " ", kd
+
     # End-effector pose command
     def _handle_slider_pose_value_changed(self, value):
         # Publish the commanded jont position values
@@ -218,6 +267,21 @@ class MyPlugin(Plugin):
         print "yaw_z position changed to", self._widget.verticalSlider_yaw_z.sliderPosition(), " deg \n"
         self.update_ik_req(self.getAllEndEffectorPoseSliderValues())
 
+    def _handle_radio_switch_des_joint_pos_input(self, checked):
+        if checked:
+            print "toggled to numeric des joint pos input"
+            self._widget.verticalSlider_1.setTracking(False)
+            self._widget.verticalSlider_2.setTracking(False)
+            self._widget.verticalSlider_3.setTracking(False)
+            self._widget.verticalSlider_4.setTracking(False)
+        else:
+            print "toggled to slider des joint pos input"
+            self._widget.verticalSlider_1.setTracking(True)
+            self._widget.verticalSlider_2.setTracking(True)
+            self._widget.verticalSlider_3.setTracking(True)
+            self._widget.verticalSlider_4.setTracking(True)
+
+    # other functions
     def getAllJointSliderValues(self):
         joint_slider_values = []
         joint_slider_values.append(self._widget.verticalSlider_1.value())
@@ -237,6 +301,7 @@ class MyPlugin(Plugin):
         print eeff_pose_slider_values
         return eeff_pose_slider_values
 
+    # publising functions    
     def publishAllJointPosCmd(self, values):
         self.pubJointPosCmdMotor1._message.data = values[0]
         self.pubJointPosCmdMotor2._message.data = values[1]

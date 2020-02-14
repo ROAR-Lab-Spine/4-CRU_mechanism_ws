@@ -64,7 +64,7 @@ class Robot4CRU(object):
 		self.current_joint_state = JointState()
 		self.current_joint_state.header.stamp = rospy.Time.now()
 		self.current_joint_state.name = ["motor_1", "motor_2", "motor_3", "motor_4"]
-		self.current_joint_state.position = [100.0, 100.0, 100.0, 100.0]
+		self.current_joint_state.position = [150.0, 150.0, 150.0, 150.0]
 		# print self.current_joint_state
 
 

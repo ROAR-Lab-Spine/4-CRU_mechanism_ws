@@ -12,6 +12,9 @@ List of devices and ICs:
 #include <PID_v1.h> // https://playground.arduino.cc/Code/PIDLibrary/
 #include <TimedAction.h> // https://playground.arduino.cc/Code/TimedAction/
 #include <ros/time.h> // For generating timestamp that sync Arduino with roscore
+#include <Filters.h>
+// PID tuning guide: https://robotics.stackexchange.com/questions/167/what-are-good-strategies-for-tuning-pid-loops
+// Filter Guide: https://playground.arduino.cc/Code/Filters/
 
 // Built-in ROS Data Type
 #include <std_msgs/Empty.h>
@@ -54,11 +57,14 @@ List of devices and ICs:
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 // Global Constants 
-float motor_max_speed = 64; // [mm/s]
-float motor_stroke_length = 200; // [mm]
+float motor_max_speed = 46; // [mm/s]
+float motor_stroke_length = 300; // [mm]
 
 // Set up controlled variables
 double motor_pos[4]; // [mm]
+
+// Set up raw sensor reading variable
+int motor_pos_raw[4]; // int
 
 // Set up command variables
 double des_motor_pos[4]; // [mm]
@@ -80,11 +86,16 @@ float des_pos[4];
 float des_vel[4];
 
 // initialize PID controller
-double Kp = 12, Ki = 1, Kd=0;
+double Kp = 50, Ki = 11, Kd=0.1;
 PID motor1_PID(&motor_pos[0], &motor_pwm[0], &des_motor_pos[0], Kp, Ki, Kd, DIRECT);
 PID motor2_PID(&motor_pos[1], &motor_pwm[1], &des_motor_pos[1], Kp, Ki, Kd, DIRECT);
 PID motor3_PID(&motor_pos[2], &motor_pwm[2], &des_motor_pos[2], Kp, Ki, Kd, DIRECT);
 PID motor4_PID(&motor_pos[3], &motor_pwm[3], &des_motor_pos[3], Kp, Ki, Kd, DIRECT);
+
+// filters out changes faster that 5 Hz.
+float filterFrequency = 5.0;
+// create a one pole (RC) lowpass filter
+FilterOnePole lowpassFilter( LOWPASS, filterFrequency );  
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -125,6 +136,30 @@ void messagePosCmdMotor4( const std_msgs::Float32& msg) {
 	des_motor_pos[3] = msg.data;
 }
 
+void messageKp( const std_msgs::Float32& msg) {
+  Kp = msg.data;
+  motor1_PID.SetTunings(Kp, Ki, Kd);
+  motor2_PID.SetTunings(Kp, Ki, Kd);
+  motor3_PID.SetTunings(Kp, Ki, Kd);
+  motor4_PID.SetTunings(Kp, Ki, Kd);
+}
+
+void messageKi( const std_msgs::Float32& msg) {
+  Ki = msg.data;
+  motor1_PID.SetTunings(Kp, Ki, Kd);
+  motor2_PID.SetTunings(Kp, Ki, Kd);
+  motor3_PID.SetTunings(Kp, Ki, Kd);
+  motor4_PID.SetTunings(Kp, Ki, Kd);
+}
+
+void messageKd( const std_msgs::Float32& msg) {
+  Kd = msg.data;
+  motor1_PID.SetTunings(Kp, Ki, Kd);
+  motor2_PID.SetTunings(Kp, Ki, Kd);
+  motor3_PID.SetTunings(Kp, Ki, Kd);
+  motor4_PID.SetTunings(Kp, Ki, Kd);
+}
+
 // Setup Subscribers
 ros::Subscriber<std_msgs::Empty> subLED("toggle_led", &messageLEDCb);
 // ros::Subscriber<control_msgs::JointJog> subPosCmd("joint_pos_cmd", &messagePosCmdCb );
@@ -132,6 +167,9 @@ ros::Subscriber<std_msgs::Float32> subPosCmdMotor1("joint_pos_cmd_motor_1", &mes
 ros::Subscriber<std_msgs::Float32> subPosCmdMotor2("joint_pos_cmd_motor_2", &messagePosCmdMotor2 );
 ros::Subscriber<std_msgs::Float32> subPosCmdMotor3("joint_pos_cmd_motor_3", &messagePosCmdMotor3 );
 ros::Subscriber<std_msgs::Float32> subPosCmdMotor4("joint_pos_cmd_motor_4", &messagePosCmdMotor4 );
+ros::Subscriber<std_msgs::Float32> subKp("pid_kp", &messageKp );
+ros::Subscriber<std_msgs::Float32> subKi("pid_ki", &messageKi );
+ros::Subscriber<std_msgs::Float32> subKd("pid_kd", &messageKd );
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -206,12 +244,18 @@ void initPIDs(){
 }
 
 void getJointFeedbacks(){
-	motor_pos[0]  = (double) analogRead(M1_POT);
-	motor_pos[1]  = (double) analogRead(M2_POT);
-	motor_pos[2]  = (double) analogRead(M3_POT);
-	motor_pos[3]  = (double) analogRead(M4_POT);
+	motor_pos_raw[0]  = analogRead(M1_POT);
+	motor_pos_raw[1]  = analogRead(M2_POT);
+	motor_pos_raw[2]  = analogRead(M3_POT);
+	motor_pos_raw[3]  = analogRead(M4_POT);
+
+//  motor_pos[0] = lowpassFilter.input(analogRead(M1_POT));
+//  motor_pos[1] = lowpassFilter.input(analogRead(M2_POT));
+//  motor_pos[2] = lowpassFilter.input(analogRead(M3_POT));
+//  motor_pos[3] = lowpassFilter.input(analogRead(M4_POT));
 
 	for (int i = 0; i < 4; i++) {
+    	motor_pos[i] = (double) motor_pos_raw[i];
     	motor_pos[i] = motor_pos[i]*motor_stroke_length/1024.0; // [mm]
     	joint_state.position[i] = (float) motor_pos[i];
     	// Show velocity as the des_joint_pos
@@ -257,6 +301,9 @@ void setup() {
 	nh.subscribe(subPosCmdMotor2);
 	nh.subscribe(subPosCmdMotor3);
 	nh.subscribe(subPosCmdMotor4);
+  nh.subscribe(subKp);
+  nh.subscribe(subKi);
+  nh.subscribe(subKd);
 
 	nh.advertise(pubJointState);
 	nh.advertise(pubDesJointState);
@@ -287,10 +334,10 @@ void setup() {
 	des_joint_state.velocities_length=4;
 
 	// run all tasks in the loop once first time
-	des_motor_pos[0] = 100;
-	des_motor_pos[1] = 100;
-	des_motor_pos[2] = 100;
-	des_motor_pos[3] = 100;
+	des_motor_pos[0] = 150;
+	des_motor_pos[1] = 150;
+	des_motor_pos[2] = 150;
+	des_motor_pos[3] = 150;
 	tic();
 }
 
